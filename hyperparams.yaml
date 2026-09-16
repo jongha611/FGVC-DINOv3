@@ -1,9 +1,16 @@
-# 하이퍼파라미터
-data:
+# ==============================================================================
+# FGVC DINOv3 하이퍼파라미터 및 경로 통합 설정 파일 (hyperparams.yaml)
+# ==============================================================================
 
-  BATCH_SIZE: 8
-  IMAGE_SIZE: 384
-  
+# ------------------------------------------------------------------------------
+# 1. 데이터 설정 (Data Configuration)
+# ------------------------------------------------------------------------------
+data:
+  # 데이터 로더 및 이미지 전처리 기본 설정
+  BATCH_SIZE: 8                     # 학습 및 검증 배치 크기
+  IMAGE_SIZE: 384                   # 입력 이미지 해상도 (384x384)
+
+  # [바닐라 데이터셋] 클러스터링 기반 분할 후 전 샘플 수집 버전 (패딩 비율별)
   vanilla_0pct:
     DATASET_NAME: "vanilla_0pct"
     DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_0pct"
@@ -14,6 +21,7 @@ data:
     DATASET_NAME: "vanilla_50pct"
     DATASET_DIR: "data/Iron-Scraps/set_with_testset/vanilla/split_dataset_50pct"
 
+  # [유니크 샘플링 데이터셋] 클러스터당 대표 이미지 1장만 추출한 버전 (중복 최소화)
   unique_sampling_0pct:
     DATASET_NAME: "unique_sampling_0pct"
     DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_0pct"
@@ -24,6 +32,7 @@ data:
     DATASET_NAME: "unique_sampling_50pct"
     DATASET_DIR: "data/Iron-Scraps/set_with_testset/unique_sampling/split_dataset_50pct"
 
+  # [팀 공유 데이터셋] 추가 검증 및 비교를 위한 공유 데이터셋 분할본
   team_share_0pct:
     DATASET_NAME: "team_share_0pct"
     DATASET_DIR: "data/Iron-Scraps/set_with_testset/team_share/split_dataset_0pct"
@@ -32,8 +41,11 @@ data:
     DATASET_DIR: "data/Iron-Scraps/set_with_testset/team_share/split_dataset_25pct"
 
 
+# ------------------------------------------------------------------------------
+# 2. 모델 및 아키텍처 설정 (Model & Architecture Configuration)
+# ------------------------------------------------------------------------------
 model:
-
+  # DINOv3 사전학습 백본 모델 가중치 경로 매핑 (터미널 프롬프트 선택용)
   vits16:
     NAME: "dinov3_vits16"
     PATH: "models/dino/weights/backbone/dinov3_vits16_pretrain_lvd1689m-08c60483.pth"
@@ -50,30 +62,38 @@ model:
     NAME: "dinov3_vit7b16"
     PATH: "models/dino/weights/backbone/dinov3_vit7b16_pretrain_lvd1689m-a955f4ea.pth"
 
-  HIDDEN_DIM1: 512
-  HIDDEN_DIM2: 256
-  NUM_CLASSES: 3
-  LORA_RANK: 16
-  LORA_ALPHA: 32
-  TARGET_MODULES: ["qkv", "proj", "mlp.fc1"]
-  LORA_DROPOUT: 0.2
-  HEAD_DROPOUT: 0.2
-  LABEL_SMOOTHING: 0.0
+  # 분류 헤드 (MLP) 및 분류 클래스 설정
+  HIDDEN_DIM1: 512                  # 선형 분류 헤드 첫 번째 은닉층 차원
+  HIDDEN_DIM2: 256                  # 선형 분류 헤드 두 번째 은닉층 차원
+  NUM_CLASSES: 3                    # 분류 대상 클래스 수 (0: cut, 1: danger, 2: excluded)
+
+  # LoRA (PEFT) 파인튜닝 파라미터
+  LORA_RANK: 16                     # LoRA 랭크 (r)
+  LORA_ALPHA: 32                    # LoRA 스케일링 팩터 (alpha)
+  TARGET_MODULES: ["qkv", "proj", "mlp.fc1"]  # LoRA 어댑터를 주입할 ViT 백본 모듈
+  LORA_DROPOUT: 0.2                 # LoRA 레이어 드롭아웃 확률
+  HEAD_DROPOUT: 0.2                 # 선형 헤드 드롭아웃 확률
+  LABEL_SMOOTHING: 0.0              # 라벨 스무딩 계수
 
 
+# ------------------------------------------------------------------------------
+# 3. 학습 하이퍼파라미터 설정 (Training Configuration)
+# ------------------------------------------------------------------------------
 train:
+  NUM_EPOCHS: 50                    # 최대 학습 에포크 수
+  LEARNING_RATE: 5e-5               # 옵티마이저 학습률 (AdamW)
+  WEIGHT_DECAY: 5e-2                # 가중치 감쇠 계수
+  EARLY_STOPPING_PATIENCE: 5        # 검증 손실 미개선 시 조기 종료 에포크 기준
+  ACCUMULATION_STEPS: 4             # 그래디언트 누적 스텝 수 (유효 배치 크기 = 8 * 4 = 32)
 
-  NUM_EPOCHS: 50
-  LEARNING_RATE: 5e-5
-  WEIGHT_DECAY: 5e-2
-  EARLY_STOPPING_PATIENCE: 5
-  ACCUMULATION_STEPS: 4
-  FOCAL_ALPHA: [0.16, 0.29, 0.55] # Train set 비율(약 5:3:2)에 맞춘 정상적인 세팅
-  FOCAL_GAMMA: 0.0
+  # Focal Loss 설정 (클래스 불균형 완화용)
+  FOCAL_ALPHA: [0.16, 0.29, 0.55]   # 클래스별 손실 가중치 (Train set 비율 약 5:3:2의 역수에 대응)
+  FOCAL_GAMMA: 0.0                  # Focal Loss 난이도 포커싱 파라미터 (0.0 설정 시 기본 CE와 유사)
 
 
+# ------------------------------------------------------------------------------
+# 4. 평가 및 체크포인트 설정 (Test & Checkpoint Configuration)
+# ------------------------------------------------------------------------------
 test:
-
   linear_lora:
-    CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"
-
+    CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"  # 베스트 모델 가중치(.pth) 저장 및 로드 경로
