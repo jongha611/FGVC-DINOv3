@@ -68,7 +68,6 @@ train:
   WEIGHT_DECAY: 5e-2
   EARLY_STOPPING_PATIENCE: 5
   ACCUMULATION_STEPS: 4
-  # STAGE1_BATCH_SIZE: 64
   FOCAL_ALPHA: [0.16, 0.29, 0.55] # Train set 비율(약 5:3:2)에 맞춘 정상적인 세팅
   FOCAL_GAMMA: 0.0
 

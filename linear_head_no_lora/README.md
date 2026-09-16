@@ -22,12 +22,13 @@
 
 ---
 
-## 📂 3. `linear_head_focal_loss_supercon/` (Focal Loss + SuperCon Loss)
-단순한 분류 손실을 넘어, 임베딩 공간 자체를 정밀하게 재구성하기 위해 **Supervised Contrastive Loss (SuperCon)**를 Focal Loss와 결합한 최고도화 파이프라인입니다.
+## 📂 3. `linear_head_no_lora/` (Linear Probing 대조군)
+LoRA 파인튜닝의 실제 기여도를 측정하기 위한 **대조군(Baseline)** 파이프라인입니다.
 * **주요 특징:**
-  * 동일한 클래스에 속한 이미지들의 임베딩은 서로 강하게 끌어당기고(Pull), 다른 클래스 간의 임베딩은 멀리 밀어내는(Push) SuperCon Loss를 병행 학습합니다.
-  * DINOv3 백본이 추출한 특징 벡터 공간이 더욱 뚜렷한 경계(Decision Boundary)를 가지도록 유도합니다.
-  * 클래스 간의 생김새가 매우 유사해 구분이 어려운 **Fine-Grained Visual Classification (FGVC)** 문제와 **데이터 불균형** 문제를 동시에 타격하기 위해 설계되었습니다.
+  * DINOv3 백본 전체를 동결(Freeze)하고, `embed_dim → num_classes` 1-layer 선형 분류기만 학습합니다.
+  * 사전학습된 임베딩이 그 자체로 얼마나 선형 분리 가능한지를 측정하는 Linear Probing의 정석 구성입니다.
+  * LoRA 적용 모듈과 성능을 비교해 파인튜닝으로 얻은 이득을 정량화하는 데 사용합니다.
+  * 결과물은 다른 모듈과 분리된 `results_no_lora/` 트리에 저장됩니다.
 
 ---
 

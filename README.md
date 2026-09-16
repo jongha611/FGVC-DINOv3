@@ -8,7 +8,7 @@ Meta의 **DINOv3** 백본(Backbone) 네트워크에 PEFT(LoRA) 기법과 다양�
 * **Backbone**: DINOv3 (`vit_s16`, `vit_b16`, `vit_l16`, `vit_h16plus`, `vit7b16` 지원)
 * **Efficient Fine-Tuning**: LoRA(Low-Rank Adaptation)를 통한 매개변수 효율적 튜닝 (`qkv`, `proj` 타겟팅)
 * **Data Preprocessing Pipeline**: Data Leakage 방지를 위한 클러스터링(Clustering) 및 오탐 방지를 위한 다수결(Majority Voting) 기반 자동 전처리
-* **Multiple Loss Formulations**: 클래스 불균형과 FGVC 한계를 극복하기 위해 Cross-Entropy, Focal Loss, Supervised Contrastive Loss(SuperCon) 3가지 파이프라인 지원
+* **Multiple Loss Formulations**: 클래스 불균형을 극복하기 위해 Cross-Entropy, Focal Loss 기반 파이프라인 지원
 * **Hyperparameter Optimization**: `Optuna`를 이용한 하이퍼파라미터 자동 최적화 지원
 
 ---
@@ -35,7 +35,7 @@ git clone https://github.com/facebookresearch/dinov3.git
 ├── preprocess_pipeline/                    # 데이터셋 빌드 및 전처리 파이프라인 (Data Leakage 및 오탐 방지)
 ├── linear_head/                            # 1. Standard Cross-Entropy 기반 분류기 학습 모듈
 ├── linear_head_focal_loss/                 # 2. 클래스 불균형 해소를 위한 Focal Loss 기반 모듈
-├── linear_head_focal_loss_supercon/        # 3. 임베딩 공간 최적화를 위한 Focal + SuperCon Loss 기반 모듈
+├── linear_head_no_lora/                    # 3. 백본 동결(Linear Probing) 대조군 모듈
 ├── data/                                   # 철스크랩 원본 및 빌드된 데이터셋 (set_with_testset 등)
 ├── dinov3/                                 # Meta DINOv3 공식 레포지토리
 ├── models/
@@ -60,7 +60,7 @@ uv run python3 preprocess_pipeline/select_dominance_label_train_val_8_2/main.py
 # 3. 학습 및 테스트 파이프라인 수행 (단일 학습, 원하는 모듈 선택)
 uv run python3 linear_head/main.py
 # uv run python3 linear_head_focal_loss/main.py
-# uv run python3 linear_head_focal_loss_supercon/main.py
+# uv run python3 linear_head_no_lora/main.py
 
 # 4. 하이퍼파라미터 최적화 (HPO) 파이프라인 수행 (Optuna)
 uv run python3 linear_head/train_utils/run_optuna.py
