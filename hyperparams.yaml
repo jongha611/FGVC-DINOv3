@@ -92,8 +92,43 @@ train:
 
 
 # ------------------------------------------------------------------------------
-# 4. 평가 및 체크포인트 설정 (Test & Checkpoint Configuration)
+# 4. 실험 정의 (Experiment Definitions)
+# ------------------------------------------------------------------------------
+# 위 2·3번의 공통 하이퍼파라미터에 더해, 실험마다 달라지는 4개 축만 여기서 정의합니다.
+# 새 실험을 추가하려면 이 블록에 항목 하나를 더하면 됩니다 (코드 수정 불필요).
+#
+#   BACKBONE_TUNING  : lora   (LoRA 어댑터 학습) | frozen (백본 전체 동결, Linear Probing)
+#   HEAD             : mlp    (512→256→3)       | linear (embed_dim→3, 1-layer)
+#   LOSS             : cross_entropy            | focal
+#   SELECTION_METRIC : pr_auc | mcc  — 베스트 체크포인트 선정 기준이자 HPO 목적 지표
+# ------------------------------------------------------------------------------
+experiment:
+  lora_ce:
+    BACKBONE_TUNING: lora
+    HEAD: mlp
+    LOSS: cross_entropy
+    SELECTION_METRIC: pr_auc
+
+  lora_focal:
+    BACKBONE_TUNING: lora
+    HEAD: mlp
+    LOSS: focal
+    SELECTION_METRIC: mcc
+
+  frozen_ce:
+    BACKBONE_TUNING: frozen
+    HEAD: linear
+    LOSS: cross_entropy
+    SELECTION_METRIC: mcc
+
+
+# ------------------------------------------------------------------------------
+# 5. 평가 및 체크포인트 설정 (Test & Checkpoint Configuration)
 # ------------------------------------------------------------------------------
 test:
   linear_lora:
     CHECKPOINT_DIR: "models/dino/weights/linear-peft-lora"  # 베스트 모델 가중치(.pth) 저장 및 로드 경로
+
+output:
+  # 산출물 루트. 실제 저장 경로는 {RESULTS_ROOT}/{experiment}/{model}/{dataset}/{val|test}/
+  RESULTS_ROOT: "results"

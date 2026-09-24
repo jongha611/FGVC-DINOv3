@@ -8,8 +8,9 @@ Meta의 **DINOv3** 백본(Backbone) 네트워크에 PEFT(LoRA) 기법과 다양�
 * **Backbone**: DINOv3 (`vit_s16`, `vit_b16`, `vit_l16`, `vit_h16plus`, `vit7b16` 지원)
 * **Efficient Fine-Tuning**: LoRA(Low-Rank Adaptation)를 통한 매개변수 효율적 튜닝 (`qkv`, `proj` 타겟팅)
 * **Data Preprocessing Pipeline**: Data Leakage 방지를 위한 클러스터링(Clustering) 및 오탐 방지를 위한 다수결(Majority Voting) 기반 자동 전처리
-* **Multiple Loss Formulations**: 클래스 불균형을 극복하기 위해 Cross-Entropy, Focal Loss 기반 파이프라인 지원
+* **Configuration-Driven Experiments**: 손실 함수·헤드 구조·파인튜닝 전략을 `hyperparams.yaml`의 `experiment` 블록으로 정의 (코드 수정 없이 실험 추가)
 * **Hyperparameter Optimization**: `Optuna`를 이용한 하이퍼파라미터 자동 최적화 지원
+* **Experiment Sweep**: experiment × model × dataset 행렬을 단일 명령으로 일괄 실행
 
 ---
 
@@ -33,9 +34,13 @@ git clone https://github.com/facebookresearch/dinov3.git
 ├── README.md
 ├── hyperparams.yaml                        # 학습 하이퍼파라미터 및 가중치/데이터셋 경로 통합 설정
 ├── preprocess_pipeline/                    # 데이터셋 빌드 및 전처리 파이프라인 (Data Leakage 및 오탐 방지)
-├── linear_head/                            # 1. Standard Cross-Entropy 기반 분류기 학습 모듈
-├── linear_head_focal_loss/                 # 2. 클래스 불균형 해소를 위한 Focal Loss 기반 모듈
-├── linear_head_no_lora/                    # 3. 백본 동결(Linear Probing) 대조군 모듈
+├── fgvc/                                   # 학습·평가 단일 패키지
+│   ├── config.py                           #   실험 설정 조립 및 산출물 경로의 단일 원천
+│   ├── models.py / losses.py               #   백본·헤드·손실 함수 조립
+│   ├── engine/                             #   train / validate / test 루프
+│   ├── metrics/                            #   지표 시각화, Attention·Grad-CAM
+│   ├── pipeline.py / hpo.py / sweep.py     #   파이프라인, Optuna HPO, 실험 행렬 러너
+│   └── cli.py                              #   진입점
 ├── data/                                   # 철스크랩 원본 및 빌드된 데이터셋 (set_with_testset 등)
 ├── dinov3/                                 # Meta DINOv3 공식 레포지토리
 ├── models/
@@ -57,15 +62,30 @@ uv sync
 # 2. 데이터셋 전처리 파이프라인 가동 (필요 시)
 uv run python3 preprocess_pipeline/select_dominance_label_train_val_8_2/main.py
 
-# 3. 학습 및 테스트 파이프라인 수행 (단일 학습, 원하는 모듈 선택)
-uv run python3 linear_head/main.py
-# uv run python3 linear_head_focal_loss/main.py
-# uv run python3 linear_head_no_lora/main.py
+# 3. 학습 + 테스트 + 시각화 (단일 실행)
+uv run python3 -m fgvc.cli train --experiment lora_focal --model vitl16 --dataset unique_sampling_0pct
 
-# 4. 하이퍼파라미터 최적화 (HPO) 파이프라인 수행 (Optuna)
-uv run python3 linear_head/train_utils/run_optuna.py
+# 4. 하이퍼파라미터 최적화 (Optuna)
+uv run python3 -m fgvc.cli hpo --experiment lora_focal --model vitl16 --dataset unique_sampling_0pct
+
+# 5. 실험 행렬 일괄 실행 (--dry-run으로 계획만 먼저 확인)
+uv run python3 -m fgvc.cli sweep --experiments all --models vitl16,vits16 \
+  --datasets unique_sampling_0pct,team_share_0pct --dry-run
 ```
-*(실행 시 프롬프트를 통해 모델 버전과 데이터셋 종류(vanilla_50pct, unique_sampling_50pct 등)를 동적으로 선택할 수 있습니다.)*
+*(인자를 생략하면 기존처럼 터미널 프롬프트로 선택할 수 있습니다.)*
+
+### 실험 정의
+학습 설정은 `hyperparams.yaml`의 `experiment` 블록에서 4개 축으로 정의합니다.
+새 실험은 이 블록에 항목을 추가하는 것만으로 만들 수 있습니다.
+
+| experiment | BACKBONE_TUNING | HEAD | LOSS | SELECTION_METRIC |
+| :--- | :--- | :--- | :--- | :--- |
+| `lora_ce` | lora | mlp (512→256) | cross_entropy | pr_auc |
+| `lora_focal` | lora | mlp (512→256) | focal | mcc |
+| `frozen_ce` | frozen (Linear Probing) | linear (1-layer) | cross_entropy | mcc |
+
+> `SELECTION_METRIC`은 베스트 체크포인트 선정 기준이자 HPO 목적 지표로 함께 쓰이므로
+> 두 값이 어긋날 수 없습니다.
 
 ---
 
@@ -89,7 +109,8 @@ uv run python3 linear_head/train_utils/run_optuna.py
 
 ## 📈 시각화 자료 (Visualization)
 
-`results/` 디렉토리 내에 파이프라인 가동 결과로 다음 자료들이 자동 생성 및 저장됩니다:
+산출물은 `results/{experiment}/{model}/{dataset}/{val|test}/` 아래에 저장되어
+실험 간에 서로 덮어쓰지 않습니다. 생성되는 자료는 다음과 같습니다:
 1. **학습 곡선 (Learning Curve)**: Loss, Accuracy, F1, PR-AUC 등 Epoch에 따른 지표 변화
 2. **혼동 행렬 (Confusion Matrix)**: 모델의 예측 분포 확인
 3. **어텐션 히트맵 (Attention Map)**: DINOv3의 Self-Attention 맵을 시각화하여 모델이 이미지를 어떻게 바라보는지 검증
