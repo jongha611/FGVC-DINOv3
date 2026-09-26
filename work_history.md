@@ -18,9 +18,17 @@
 
 - **W-4 `fgvc/` 통합 리팩터링 전체 커밋**: 구 폴더 4개(`linear_head*`) 삭제, `fgvc/` 패키지, `results_no_lora/` → `results/results_no_lora/` 이동, 문서(`README.md`, `CLAUDE.md`, `GEMINI.md`), 에이전트 파일(`.agents/`), `work_history.md`를 한 커밋으로 묶음. 개인 프로젝트라 에이전트 파일과 작업 기록도 추적하기로 결정(exclude 계획 철회). push는 하지 않음.
 
+### 2026-09-26
+
+- **W-5 맥·윈도우 공용 `uv sync`**: `pyproject.toml`에서 torch/torchvision/torchaudio의 cu124 소스에 `marker = "sys_platform != 'darwin'"`을 추가하고 버전을 `==2.6.0`/`==0.21.0`/`==2.6.0`으로 고정. `uv lock` 결과 맥 분기만 추가되고 윈도우 cu124 해석은 유지됨. 맥 `uv sync` 성공(torch 2.6.0, `mps: True`), `sweep --dry-run` 통과. 윈도우 실기 확인은 아직 안 함. ← T-4
+
 -----------------------------------------------------------------
 
 ## 시도 이력
+
+### 2026-09-26
+
+- **T-4 [채택 → W-5] uv 플랫폼 분기 사전 시험**: scratchpad 복사본에서 두 안을 비교. A(marker만): 맥에서 torch 2.14.0이 잡혀 윈도우(2.6.0)와 8단계 차이 → 기각. B(marker + `==` 고정): 양쪽 모두 2.6.0 → 채택.
 
 ### 2026-09-25
 

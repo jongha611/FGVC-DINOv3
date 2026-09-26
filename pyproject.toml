@@ -11,10 +11,10 @@ dependencies = [
     "peft>=0.19.1",
     "scikit-learn>=1.8.0",
     "termcolor>=3.3.0",
-    "torch>=2.6.0",
-    "torchaudio>=2.6.0",
+    "torch==2.6.0",
+    "torchaudio==2.6.0",
     "torchmetrics>=1.9.0",
-    "torchvision>=0.21.0",
+    "torchvision==0.21.0",
     "ultralytics>=8.4.53",
 ]
 
@@ -24,9 +24,9 @@ url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu124" }
-torchvision = { index = "pytorch-cu124" }
-torchaudio = { index = "pytorch-cu124" }
+torch = { index = "pytorch-cu124", marker = "sys_platform != 'darwin'" }
+torchvision = { index = "pytorch-cu124", marker = "sys_platform != 'darwin'" }
+torchaudio = { index = "pytorch-cu124", marker = "sys_platform != 'darwin'" }
 
 [tool.basedpyright]
 exclude = ["**/node_modules", "**/__pycache__", ".venv", "data"]
