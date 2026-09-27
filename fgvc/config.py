@@ -21,12 +21,10 @@ SelectionMetric = Literal["pr_auc", "mcc"]
 DEFAULT_RESULTS_ROOT = "results"
 
 
-########### #
 # 설정 객체
-########### #
 @dataclass(frozen=True)
 class ExperimentConfig:
-    """한 번의 학습/평가 실행을 완전히 규정하는 설정."""
+    """한 번의 학습&평가 실행에 관한 모든 설정"""
 
     # 식별자
     experiment: str
@@ -41,7 +39,7 @@ class ExperimentConfig:
     batch_size: int
     image_size: int
 
-    # 실험 축
+    # 실험 요인
     backbone_tuning: BackboneTuning
     head: HeadType
     loss: LossType

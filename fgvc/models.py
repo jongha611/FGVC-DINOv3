@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
+from torch import nn
 from peft import LoraConfig, get_peft_model
 
 from fgvc.config import ExperimentConfig
